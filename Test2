@@ -1,60 +1,32 @@
 import streamlit as st
 
-# Custom CSS for modal overlay
-st.markdown(
-    """
+si = st.button('Show insights')
+
+if si:
+    st.markdown('The call was awesome! Just work a little on sounding a bit happy if the customer is.')
+    st.markdown("Here's the video:")
+    video_html = """
     <style>
-    .modal-overlay {
-        position: fixed;
+    .overlay {
+        position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-        display: none;
-    }
-    .modal-content {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: white;
-        padding: 20px;
-        z-index: 1001;
-        display: none;
+        background-color: rgba(0, 0, 0, 0.5); /* semi-transparent black */
+        z-index: 1;
     }
     </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# Function to toggle modal overlay
-def toggle_modal():
-    js_script = """
+    <div id="overlay" class="overlay" onclick="hideOverlay()"></div>
     <script>
-    var modalOverlay = document.getElementById('modal-overlay');
-    var modalContent = document.getElementById('modal-content');
-    modalOverlay.style.display = 'block';
-    modalContent.style.display = 'block';
+    function hideOverlay() {
+        document.getElementById("overlay").style.display = "none";
+    }
     </script>
+    <center>
+    <video controls autoplay="true" muted="false" loop="true">
+    <source src="https://static.streamlit.io/examples/star.mp4" type="video/mp4" />
+    </video>
+    </center>
     """
-    st.markdown(js_script, unsafe_allow_html=True)
-
-# Button to trigger video modal
-if st.button("Click to play video"):
-    toggle_modal()
-
-# Video modal overlay
-st.markdown('<div id="modal-overlay" class="modal-overlay"></div>', unsafe_allow_html=True)
-st.markdown(
-    """
-    <div id="modal-content" class="modal-content">
-        <video width="640" height="360" controls autoplay>
-            <source src="your_video.mp4" type="video/mp4">
-            Your browser does not support the video tag.
-        </video>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+    st.markdown(video_html, unsafe_allow_html=True)

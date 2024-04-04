@@ -1,32 +1,58 @@
 import streamlit as st
 
-si = st.button('Show insights')
+# Define HTML and CSS
+video_html = """
+<video autoplay controls width="640" height="480">
+  <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+"""
 
-if si:
-    st.markdown('The call was awesome! Just work a little on sounding a bit happy if the customer is.')
-    st.markdown("Here's the video:")
-    video_html = """
-    <style>
-    .overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5); /* semi-transparent black */
-        z-index: 1;
-    }
-    </style>
-    <div id="overlay" class="overlay" onclick="hideOverlay()"></div>
+css = """
+<style>
+.video-popup {
+  display: none;
+  position: fixed;
+  z-index: 999;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.video-content {
+  position: relative;
+  top: 50%;
+  transform: translateY(-50%);
+  text-align: center;
+}
+</style>
+"""
+
+# Streamlit App
+def main():
+    st.title("Video Popup")
+
+    # Button to open video popup
+    if st.button("Open Video"):
+        st.markdown(css, unsafe_allow_html=True)
+        st.markdown('<div id="videoPopup" class="video-popup">', unsafe_allow_html=True)
+        st.markdown('<div class="video-content">', unsafe_allow_html=True)
+        st.markdown('<span class="close" onclick="closeVideo()">&times;</span>', unsafe_allow_html=True)
+        st.markdown(video_html, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # JavaScript to close video popup
+    st.markdown("""
     <script>
-    function hideOverlay() {
-        document.getElementById("overlay").style.display = "none";
+    function closeVideo() {
+        var videoPopup = document.getElementById("videoPopup");
+        videoPopup.style.display = "none";
     }
     </script>
-    <center>
-    <video controls autoplay="true" muted="false" loop="true">
-    <source src="https://static.streamlit.io/examples/star.mp4" type="video/mp4" />
-    </video>
-    </center>
-    """
-    st.markdown(video_html, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
+
+if __name__ == "__main__":
+    main()

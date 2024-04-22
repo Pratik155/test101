@@ -1,86 +1,73 @@
-import streamlit as st
+import pyaudio
+import wave
+import pyscreenshot as ImageGrab
+import numpy as np
+import cv2
 
-def main():
-    st.title("Popup Video Example")
+# Set up audio recording parameters
+FORMAT = pyaudio.paInt16
+CHANNELS = 2
+RATE = 44100
+CHUNK = 1024
+RECORD_SECONDS = 5
+WAVE_OUTPUT_FILENAME = "output.wav"
 
-    # Button to trigger the popup
-    if st.button("Watch Video"):
-        # Call JavaScript to show the popup
-        st.markdown(
-            """
-            <style>
-            /* The Modal (background) */
-            .modal {
-                display: none; /* Hidden by default */
-                position: fixed; /* Stay in place */
-                z-index: 9999; /* Sit on top */
-                left: 0;
-                top: 0;
-                width: 100%; /* Full width */
-                height: 100%; /* Full height */
-                overflow: auto; /* Enable scroll if needed */
-                background-color: rgb(0,0,0); /* Fallback color */
-                background-color: rgba(0,0,0,0.7); /* Black w/ opacity */
-            }
+# Initialize PyAudio
+audio = pyaudio.PyAudio()
 
-            /* Modal Content/Box */
-            .modal-content {
-                background-color: #fefefe;
-                margin: 15% auto;
-                padding: 20px;
-                border: 1px solid #888;
-                width: 70%; /* Set width to 70% of screen */
-            }
+# Open audio stream
+stream = audio.open(format=FORMAT, channels=CHANNELS,
+                    rate=RATE, input=True,
+                    frames_per_buffer=CHUNK)
 
-            /* The Close Button */
-            .close {
-                color: #aaa;
-                float: right;
-                font-size: 28px;
-                font-weight: bold;
-            }
+print("Recording audio...")
 
-            .close:hover,
-            .close:focus {
-                color: black;
-                text-decoration: none;
-                cursor: pointer;
-            }
-            </style>
+frames = []
 
-            <div id="myModal" class="modal">
-                <div class="modal-content">
-                    <span class="close" onclick="closeModal()">&times;</span>
-                    <video width="100%" height="100%" controls autoplay>
-                        <source src="https://www.example.com/your-video.mp4" type="video/mp4">
-                    </video>
-                </div>
-            </div>
+# Record audio
+for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+    data = stream.read(CHUNK)
+    frames.append(data)
 
-            <script>
-            // Get the modal
-            var modal = document.getElementById("myModal");
+print("Finished recording audio.")
 
-            // When the user clicks the button, open the modal
-            function openModal() {
-                modal.style.display = "block";
-            }
+# Stop audio stream
+stream.stop_stream()
+stream.close()
+audio.terminate()
 
-            // When the user clicks on <span> (x), close the modal
-            function closeModal() {
-                modal.style.display = "none";
-            }
+# Save audio to file
+with wave.open(WAVE_OUTPUT_FILENAME, 'wb') as wf:
+    wf.setnchannels(CHANNELS)
+    wf.setsampwidth(audio.get_sample_size(FORMAT))
+    wf.setframerate(RATE)
+    wf.writeframes(b''.join(frames))
 
-            // When the user clicks anywhere outside of the modal, close it
-            window.onclick = function(event) {
-                if (event.target == modal) {
-                    modal.style.display = "none";
-                }
-            }
-            </script>
-            """,
-            unsafe_allow_html=True
-        )
+print("Audio saved to", WAVE_OUTPUT_FILENAME)
 
-if __name__ == "__main__":
-    main()
+# Capture screen
+print("Capturing screen...")
+
+# Get screen resolution
+screen = ImageGrab.grab()
+width, height = screen.size
+
+# Set video codec and output file
+fourcc = cv2.VideoWriter_fourcc(*'XVID')
+out = cv2.VideoWriter('output.avi', fourcc, 20.0, (width, height))
+
+# Record screen
+while True:
+    img = ImageGrab.grab()
+    frame = np.array(img)
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    out.write(frame)
+    cv2.imshow("Screen Recording", frame)
+    if cv2.waitKey(1) == ord("q"):
+        break
+
+# Release resources
+out.release()
+cv2.destroyAllWindows()
+
+print("Screen recording saved to output.avi")

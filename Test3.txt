@@ -64,10 +64,9 @@ while True:
     out.write(frame)
     cv2.imshow("Screen Recording", frame)
     if cv2.waitKey(1) == ord("q"):
+        out.release()  # Release video writer
         break
 
-# Release resources
-out.release()
 cv2.destroyAllWindows()
 
 print("Screen recording saved to output.avi")

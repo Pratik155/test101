@@ -56,8 +56,9 @@ width, height = screen.size
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
 out = cv2.VideoWriter('output.avi', fourcc, 20.0, (width, height))
 
-# Record screen
-while True:
+# Record screen for 5 seconds
+start_time = cv2.getTickCount()
+while (cv2.getTickCount() - start_time) / cv2.getTickFrequency() < 5:
     img = ImageGrab.grab()
     frame = np.array(img)
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)

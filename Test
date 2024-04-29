@@ -3,7 +3,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity
 import re
-from collections import Counter
+import numpy as np
 
 # Sample DataFrame
 data = {'Conv_id': [1, 2, 3, 4, 5],
@@ -37,22 +37,20 @@ kmeans.fit(tfidf_matrix)
 # Assign cluster labels to DataFrame
 df['cluster_label'] = kmeans.labels_
 
-# Find the complaint closest to the center of each cluster
-centers = kmeans.cluster_centers_
+# Find the complaint closest to the center of each cluster and count the number of complaints in each cluster
 closest_complaints = []
+cluster_counts = []
+
 for i in range(num_clusters):
     cluster_indices = df[df['cluster_label'] == i].index
     cluster_tfidf_matrix = tfidf_matrix[cluster_indices]
-    similarity_to_center = cosine_similarity(cluster_tfidf_matrix, [centers[i]])
+    similarity_to_center = cosine_similarity(cluster_tfidf_matrix, [kmeans.cluster_centers_[i]])
     closest_complaint_index = cluster_indices[np.argmax(similarity_to_center)]
     closest_complaint = df.loc[closest_complaint_index, 'customer_complaints']
     closest_complaints.append(closest_complaint)
+    cluster_counts.append(len(cluster_indices))
 
-# Get top 5 biggest complaints
-top_5_complaints = df['customer_complaints'].value_counts().head(5)
-
-print("Top 5 biggest complaints:")
-print(top_5_complaints)
-print("\nComplaints closest to the center of each cluster:")
-for i, complaint in enumerate(closest_complaints):
-    print(f"Cluster {i+1}: {complaint}")
+# Print the results
+print("Cluster\tNumber of Complaints\tClosest Complaint to Centroid")
+for i in range(num_clusters):
+    print(f"{i+1}\t{cluster_counts[i]}\t{closest_complaints[i]}")

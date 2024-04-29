@@ -1,20 +1,62 @@
-from sklearn.decomposition import LatentDirichletAllocation
-from sklearn.feature_extraction.text import CountVectorizer
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import KMeans
+from sklearn.metrics.pairwise import cosine_similarity
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+import numpy as np
 
-# Assuming df is your pandas DataFrame with 'customer_complaints' column
+# Sample DataFrame
+data = {'Conv_id': [1, 2, 3, 4, 5],
+        'customer_complaints': ['The product is not working properly', 
+                                'I received a damaged item', 
+                                'I want to cancel my subscription', 
+                                'The delivery was very late', 
+                                'I need a refund for my order']}
 
-# Text preprocessing (tokenization)
-count_vectorizer = CountVectorizer()
-X = count_vectorizer.fit_transform(df['customer_complaints'])
+df = pd.DataFrame(data)
 
-# Apply LDA
-n_topics = 5  # Number of topics (problem areas) you want to identify
-lda = LatentDirichletAllocation(n_components=n_topics, random_state=42)
-lda.fit(X)
+# Function to preprocess text
+def preprocess_text(text):
+    tokens = word_tokenize(text.lower())  # Tokenization
+    tokens = [token for token in tokens if token.isalnum()]  # Remove punctuation
+    tokens = [token for token in tokens if token not in stopwords.words('english')]  # Remove stopwords
+    lemmatizer = WordNetLemmatizer()
+    tokens = [lemmatizer.lemmatize(token) for token in tokens]  # Lemmatization
+    return ' '.join(tokens)
 
-# Display the top words for each topic
-feature_names = count_vectorizer.get_feature_names_out()
-for topic_idx, topic in enumerate(lda.components_):
-    top_words_idx = topic.argsort()[:-11:-1]
-    top_words = [feature_names[i] for i in top_words_idx]
-    print(f"Topic {topic_idx + 1}: {' '.join(top_words)}")
+# Preprocess the complaints
+df['preprocessed_complaints'] = df['customer_complaints'].apply(preprocess_text)
+
+# TF-IDF Vectorization
+tfidf_vectorizer = TfidfVectorizer()
+tfidf_matrix = tfidf_vectorizer.fit_transform(df['preprocessed_complaints'])
+
+# K-Means Clustering
+num_clusters = 3  # You can adjust this parameter
+kmeans = KMeans(n_clusters=num_clusters)
+kmeans.fit(tfidf_matrix)
+
+# Assign cluster labels to DataFrame
+df['cluster_label'] = kmeans.labels_
+
+# Find the complaint closest to the center of each cluster
+centers = kmeans.cluster_centers_
+closest_complaints = []
+for i in range(num_clusters):
+    cluster_indices = np.where(df['cluster_label'] == i)[0]
+    cluster_tfidf_matrix = tfidf_matrix[cluster_indices]
+    similarity_to_center = cosine_similarity(cluster_tfidf_matrix, [centers[i]])
+    closest_complaint_index = cluster_indices[np.argmax(similarity_to_center)]
+    closest_complaint = df.loc[closest_complaint_index, 'customer_complaints']
+    closest_complaints.append(closest_complaint)
+
+# Get top 5 biggest complaints
+top_5_complaints = df['customer_complaints'].value_counts().head(5)
+
+print("Top 5 biggest complaints:")
+print(top_5_complaints)
+print("\nComplaints closest to the center of each cluster:")
+for i, complaint in enumerate(closest_complaints):
+    print(f"Cluster {i+1}: {complaint}")

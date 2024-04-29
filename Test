@@ -1,73 +1,23 @@
-import pyaudio
-import wave
-import pyscreenshot as ImageGrab
-import numpy as np
-import cv2
+import pandas as pd
+import multiprocessing
 
-# Set up audio recording parameters
-FORMAT = pyaudio.paInt16
-CHANNELS = 2
-RATE = 44100
-CHUNK = 1024
-RECORD_SECONDS = 5
-WAVE_OUTPUT_FILENAME = "output.wav"
+def process_row(row, featurename):
+    insight = getInsight(row['conversation'], featurename)
+    return row, insight
 
-# Initialize PyAudio
-audio = pyaudio.PyAudio()
+def get_insights_parallel(df, featurenamelist, max_processes=20):
+    results = []
+    with multiprocessing.Pool(processes=min(len(df), max_processes)) as pool:
+        for featurename in featurenamelist:
+            results.extend(pool.starmap(process_row, [(row, featurename) for _, row in df.iterrows()]))
+    return results
 
-# Open audio stream
-stream = audio.open(format=FORMAT, channels=CHANNELS,
-                    rate=RATE, input=True,
-                    frames_per_buffer=CHUNK)
+# Assuming df is your DataFrame and featurenamelist is your list of feature names
+insights = get_insights_parallel(df, featurenamelist)
 
-print("Recording audio...")
+# Extracting insights and adding them as a new column to the DataFrame
+for i, featurename in enumerate(featurenamelist):
+    df[f'Insight_{i+1}'] = [insight[i][1] for insight in insights]
 
-frames = []
-
-# Record audio
-for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
-    data = stream.read(CHUNK)
-    frames.append(data)
-
-print("Finished recording audio.")
-
-# Stop audio stream
-stream.stop_stream()
-stream.close()
-audio.terminate()
-
-# Save audio to file
-with wave.open(WAVE_OUTPUT_FILENAME, 'wb') as wf:
-    wf.setnchannels(CHANNELS)
-    wf.setsampwidth(audio.get_sample_size(FORMAT))
-    wf.setframerate(RATE)
-    wf.writeframes(b''.join(frames))
-
-print("Audio saved to", WAVE_OUTPUT_FILENAME)
-
-# Capture screen
-print("Capturing screen...")
-
-# Get screen resolution
-screen = ImageGrab.grab()
-width, height = screen.size
-
-# Set video codec and output file
-fourcc = cv2.VideoWriter_fourcc(*'XVID')
-out = cv2.VideoWriter('output.avi', fourcc, 20.0, (width, height))
-
-# Record screen
-while True:
-    img = ImageGrab.grab()
-    frame = np.array(img)
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    out.write(frame)
-    cv2.imshow("Screen Recording", frame)
-    if cv2.waitKey(1) == ord("q"):
-        break
-
-# Release resources
-out.release()
-cv2.destroyAllWindows()
-
-print("Screen recording saved to output.avi")
+# Displaying the modified DataFrame with insights as new columns
+print(df)

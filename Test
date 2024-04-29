@@ -1,1 +1,20 @@
-h
+from sklearn.decomposition import LatentDirichletAllocation
+from sklearn.feature_extraction.text import CountVectorizer
+
+# Assuming df is your pandas DataFrame with 'customer_complaints' column
+
+# Text preprocessing (tokenization)
+count_vectorizer = CountVectorizer()
+X = count_vectorizer.fit_transform(df['customer_complaints'])
+
+# Apply LDA
+n_topics = 5  # Number of topics (problem areas) you want to identify
+lda = LatentDirichletAllocation(n_components=n_topics, random_state=42)
+lda.fit(X)
+
+# Display the top words for each topic
+feature_names = count_vectorizer.get_feature_names_out()
+for topic_idx, topic in enumerate(lda.components_):
+    top_words_idx = topic.argsort()[:-11:-1]
+    top_words = [feature_names[i] for i in top_words_idx]
+    print(f"Topic {topic_idx + 1}: {' '.join(top_words)}")

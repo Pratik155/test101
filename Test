@@ -1,56 +1,25 @@
+import plotly.express as px
 import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.cluster import KMeans
-from sklearn.metrics.pairwise import cosine_similarity
-import re
-import numpy as np
 
-# Sample DataFrame
-data = {'Conv_id': [1, 2, 3, 4, 5],
-        'customer_complaints': ['The product is not working properly', 
-                                'I received a damaged item', 
-                                'I want to cancel my subscription', 
-                                'The delivery was very late', 
-                                'I need a refund for my order']}
+# Sample data
+data = {
+    'BankProducts': ['Savings', 'Checking', 'Credit Card', 'Loan'],
+    'resolvedconv_num': [120, 90, 150, 80],
+    'unresolvedconv_num': [15, 10, 25, 5]
+}
 
 df = pd.DataFrame(data)
 
-# Function to preprocess text
-def preprocess_text(text):
-    text = text.lower()  # Convert to lowercase
-    text = re.sub(r'\W', ' ', text)  # Remove non-word characters
-    text = re.sub(r'\s+', ' ', text)  # Remove extra whitespaces
-    return text.strip()  # Strip leading and trailing whitespaces
+# Plotting the bubble chart
+fig = px.scatter(df, x='BankProducts', y=['resolvedconv_num', 'unresolvedconv_num'],
+                 size=['resolvedconv_num', 'unresolvedconv_num'],
+                 labels={'BankProducts': 'Bank Products', 'value': 'Number of Conversations', 'variable': 'Type'},
+                 title='Resolved and Unresolved Conversations by Bank Products',
+                 template='plotly_white',
+                 color_discrete_sequence=['blue', 'red']
+                 )
 
-# Preprocess the complaints
-df['preprocessed_complaints'] = df['customer_complaints'].apply(preprocess_text)
+# Update x-axis tick angle for better readability
+fig.update_layout(xaxis=dict(tickangle=45))
 
-# TF-IDF Vectorization
-tfidf_vectorizer = TfidfVectorizer()
-tfidf_matrix = tfidf_vectorizer.fit_transform(df['preprocessed_complaints'])
-
-# K-Means Clustering
-num_clusters = 3  # You can adjust this parameter
-kmeans = KMeans(n_clusters=num_clusters)
-kmeans.fit(tfidf_matrix)
-
-# Assign cluster labels to DataFrame
-df['cluster_label'] = kmeans.labels_
-
-# Find the complaint closest to the center of each cluster and count the number of complaints in each cluster
-closest_complaints = []
-cluster_counts = []
-
-for i in range(num_clusters):
-    cluster_indices = df[df['cluster_label'] == i].index
-    cluster_tfidf_matrix = tfidf_matrix[cluster_indices]
-    similarity_to_center = cosine_similarity(cluster_tfidf_matrix, [kmeans.cluster_centers_[i]])
-    closest_complaint_index = cluster_indices[np.argmax(similarity_to_center)]
-    closest_complaint = df.loc[closest_complaint_index, 'customer_complaints']
-    closest_complaints.append(closest_complaint)
-    cluster_counts.append(len(cluster_indices))
-
-# Print the results
-print("Cluster\tNumber of Complaints\tClosest Complaint to Centroid")
-for i in range(num_clusters):
-    print(f"{i+1}\t{cluster_counts[i]}\t{closest_complaints[i]}")
+fig.show()

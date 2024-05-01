@@ -10,13 +10,14 @@ data = {
 
 df = pd.DataFrame(data)
 
+# Melt the DataFrame to have 'resolvedconv_num' and 'unresolvedconv_num' in one column
+df_melted = pd.melt(df, id_vars='BankProducts', var_name='Type', value_name='Number of Conversations')
+
 # Plotting the bubble chart
-fig = px.scatter(df, x='BankProducts', y=['resolvedconv_num', 'unresolvedconv_num'],
-                 size=['resolvedconv_num', 'unresolvedconv_num'],
-                 labels={'BankProducts': 'Bank Products', 'value': 'Number of Conversations', 'variable': 'Type'},
+fig = px.scatter(df_melted, x='BankProducts', y='Number of Conversations', color='Type',
+                 size='Number of Conversations', template='plotly_white',
                  title='Resolved and Unresolved Conversations by Bank Products',
-                 template='plotly_white',
-                 color_discrete_sequence=['blue', 'red']
+                 labels={'BankProducts': 'Bank Products', 'Number of Conversations': 'Number of Conversations', 'Type': 'Type'}
                  )
 
 # Update x-axis tick angle for better readability

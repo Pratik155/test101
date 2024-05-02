@@ -1,26 +1,38 @@
-import plotly.express as px
-import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
-# Sample data
-data = {
-    'BankProducts': ['Savings', 'Checking', 'Credit Card', 'Loan'],
-    'resolvedconv_num': [120, 90, 150, 80],
-    'unresolvedconv_num': [15, 10, 25, 5]
-}
+# Define your list of stop words
+stop_words = set(["your", "list", "of", "stop", "words", "here"])
 
-df = pd.DataFrame(data)
+# Assuming df_sentences contains a column 'sentences' and df_categories contains a column 'categories'
+sentences = df_sentences['sentences']
+categories = df_categories['categories']
 
-# Melt the DataFrame to have 'resolvedconv_num' and 'unresolvedconv_num' in one column
-df_melted = pd.melt(df, id_vars='BankProducts', var_name='Type', value_name='Number of Conversations')
+# Convert categories to lowercase
+categories = categories.apply(lambda x: [cat.lower() for cat in x])
 
-# Plotting the bubble chart
-fig = px.scatter(df_melted, x='BankProducts', y='Number of Conversations', color='Type',
-                 size='Number of Conversations', template='plotly_white',
-                 title='Resolved and Unresolved Conversations by Bank Products',
-                 labels={'BankProducts': 'Bank Products', 'Number of Conversations': 'Number of Conversations', 'Type': 'Type'}
-                 )
+# Flatten the list of categories
+categories_flat = [cat for sublist in categories for cat in sublist]
 
-# Update x-axis tick angle for better readability
-fig.update_layout(xaxis=dict(tickangle=45))
+# Create TF-IDF vectorizer with stop words removal
+tfidf_vectorizer = TfidfVectorizer(ngram_range=(1, 2), stop_words=stop_words)
 
-fig.show()
+# Fit and transform sentences to TF-IDF vectors
+tfidf_sentences = tfidf_vectorizer.fit_transform(sentences)
+
+# Initialize a dictionary to store sentence-category mappings
+sentence_category_mapping = {}
+
+# Iterate over each sentence
+for i, sentence in enumerate(sentences):
+    # Calculate cosine similarity between sentence and each category
+    similarities = cosine_similarity(tfidf_sentences[i], tfidf_vectorizer.transform(categories_flat))
+    # Find the index of the category with highest similarity
+    max_sim_idx = np.argmax(similarities)
+    # Map the sentence to the corresponding category
+    sentence_category_mapping[sentence] = categories_flat[max_sim_idx]
+
+# Print the mapping
+for sentence, category in sentence_category_mapping.items():
+    print(f"Sentence: {sentence} -> Category: {category}")

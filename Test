@@ -1,38 +1,45 @@
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
+import pandas as pd
 
-# Define your list of stop words
-stop_words = set(["your", "list", "of", "stop", "words", "here"])
+# Define stopwords
+stop_words = set([
+    "i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", "yours", "yourself", "yourselves",
+    "he", "him", "his", "himself", "she", "her", "hers", "herself", "it", "its", "itself", "they", "them", "their",
+    "theirs", "themselves", "what", "which", "who", "whom", "this", "that", "these", "those", "am", "is", "are",
+    "was", "were", "be", "been", "being", "have", "has", "had", "having", "do", "does", "did", "doing", "a", "an",
+    "the", "and", "but", "if", "or", "because", "as", "until", "while", "of", "at", "by", "for", "with", "about",
+    "against", "between", "into", "through", "during", "before", "after", "above", "below", "to", "from", "up",
+    "down", "in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "here", "there", "when",
+    "where", "why", "how", "all", "any", "both", "each", "few", "more", "most", "other", "some", "such", "no",
+    "nor", "not", "only", "own", "same", "so", "than", "too", "very", "s", "t", "can", "will", "just", "don",
+    "should", "now"
+])
 
-# Assuming df_sentences contains a column 'sentences' and df_categories contains a column 'categories'
-sentences = df_sentences['sentences']
-categories = df_categories['categories']
+# Example DataFrames
+# df1 = pandas DataFrame with a column 'Sentences'
+# df2 = pandas DataFrame with a column 'Categories'
 
-# Convert categories to lowercase
-categories = categories.apply(lambda x: [cat.lower() for cat in x])
+# Initialize CountVectorizer
+vectorizer = CountVectorizer(stop_words=stop_words)
 
-# Flatten the list of categories
-categories_flat = [cat for sublist in categories for cat in sublist]
+# Fit and transform the 'Sentences' from df1
+X = vectorizer.fit_transform(df1['Sentences'])
 
-# Create TF-IDF vectorizer with stop words removal
-tfidf_vectorizer = TfidfVectorizer(ngram_range=(1, 2), stop_words=stop_words)
+# Transform 'Categories' from df2
+Y = vectorizer.transform(df2['Categories'])
 
-# Fit and transform sentences to TF-IDF vectors
-tfidf_sentences = tfidf_vectorizer.fit_transform(sentences)
+# Compute cosine similarity between X and Y
+cos_sim = cosine_similarity(X, Y)
 
-# Initialize a dictionary to store sentence-category mappings
-sentence_category_mapping = {}
+# Find the index of the most similar category for each sentence
+max_sim_idx = cos_sim.argmax(axis=1)
 
-# Iterate over each sentence
-for i, sentence in enumerate(sentences):
-    # Calculate cosine similarity between sentence and each category
-    similarities = cosine_similarity(tfidf_sentences[i], tfidf_vectorizer.transform(categories_flat))
-    # Find the index of the category with highest similarity
-    max_sim_idx = np.argmax(similarities)
-    # Map the sentence to the corresponding category
-    sentence_category_mapping[sentence] = categories_flat[max_sim_idx]
+# Map sentences to categories
+mapped_categories = df2.iloc[max_sim_idx]['Categories']
 
-# Print the mapping
-for sentence, category in sentence_category_mapping.items():
-    print(f"Sentence: {sentence} -> Category: {category}")
+# Add mapped categories to df1
+df1['Mapped_Categories'] = mapped_categories.values
+
+# Display the result
+print(df1)

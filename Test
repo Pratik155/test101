@@ -1,4 +1,4 @@
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFont
 import textwrap
 
 # Create a white background image
@@ -18,33 +18,22 @@ box_y2 = 1027
 draw = ImageDraw.Draw(image)
 draw.rectangle([box_x1, box_y1, box_x2, box_y2], fill=box_color)
 
-# Define the text to fill the box (lorem ipsum)
+# Define the lorem ipsum text
 text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
 
 # Load a font and set its size
-font_size = 24
 font = ImageFont.load_default()
 
-# Wrap the text to fit within the width of the box
-wrapped_text = textwrap.fill(text, width=35)
+# Wrap the text to fit inside the box
+max_text_width = box_x2 - box_x1
+wrapped_text = textwrap.fill(text, width=60)
 
-# Calculate text width and height
-text_width, text_height = draw.textsize(wrapped_text, font=font)
+# Calculate the position to start drawing the text
+text_x = box_x1
+text_y = box_y1
 
-# Calculate the position to center the text in the box
-text_x = (box_x1 + box_x2 - text_width) // 2
-text_y = (box_y1 + box_y2 - text_height) // 2
-
-# Draw the text on the image
-draw.text((text_x, text_y), wrapped_text, fill=(0, 0, 0), font=font)
-
-# Apply perspective transform to warp the text
-bbox = (text_x, text_y, text_x + text_width, text_y + text_height)
-warped_text = image.crop(bbox)
-warped_text = warped_text.transform(warped_text.size, Image.PERSPECTIVE, (1, 0.2, 0, 0.2, 1, 0, 0, 0))
-
-# Paste the warped text back onto the original image
-image.paste(warped_text, bbox)
+# Draw the wrapped text on the image
+draw.multiline_text((text_x, text_y), wrapped_text, fill=(0, 0, 0), font=font)
 
 # Save the image
 image.save("output_image.png")

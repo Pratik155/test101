@@ -1,60 +1,35 @@
-import pandas as pd
-import matplotlib.pyplot as plt
 from pptx import Presentation
 from pptx.util import Inches
-import io
 
-# Sample DataFrame
-data = {
-    'Conversation_id': [1, 2, 3, 4, 5],
-    'customer_id': ['A', 'B', 'C', 'D', 'E'],
-    'call_summary': ['Summary 1', 'Summary 2', 'Summary 3', 'Summary 4', 'Summary 5'],
-    'NPS': [8, 7, 9, 6, 8],
-    'pain_point': ['Pain 1', 'Pain 2', 'Pain 3', 'Pain 4', 'Pain 5'],
-    'customer_feedback': ['Feedback 1', 'Feedback 2', 'Feedback 3', 'Feedback 4', 'Feedback 5']
-}
+# Assuming df is your DataFrame with the specified columns
 
-df = pd.DataFrame(data)
-
-# Create a PowerPoint presentation
+# Create a PowerPoint presentation object
 prs = Presentation()
 
-# Iterate through each row of the DataFrame
+# Loop through each row in the DataFrame
 for index, row in df.iterrows():
-    # Create a new slide
-    slide_layout = prs.slide_layouts[5]  # Use a layout suitable for content
-    slide = prs.slides.add_slide(slide_layout)
-
-    # Set title
-    title = slide.shapes.title
-    title.text = f"Conversation {row['Conversation_id']}"
-
-    # Add text boxes for each column
-    left = Inches(1)
-    top = Inches(1.5)
-    width = Inches(8)
-    height = Inches(1)
-    for col_name, value in row.items():
-        textbox = slide.shapes.add_textbox(left, top, width, height)
-        text_frame = textbox.text_frame
-        p = text_frame.add_paragraph()
-        p.text = f"{col_name}: {value}"
-        top += height + Inches(0.5)
+    # Create a slide for each row
+    slide = prs.slides.add_slide(prs.slide_layouts[5])  # Choose a layout (you can change the index as per your preference)
     
-    # Plot NPS scores as a bar chart
-    fig, ax = plt.subplots()
-    ax.bar(['NPS'], [row['NPS']])
-    ax.set_ylabel('NPS')
-    ax.set_title('Net Promoter Score')
-    # Convert plot to an image
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    # Add image to slide
-    left = Inches(5)
-    top = Inches(1.5)
-    pic = slide.shapes.add_picture(buf, left, top, width=Inches(3))
-    plt.close()
+    # Access each column data and format it as needed
+    conversation_id = row['Conversation_id']
+    customer_id = row['customer_id']
+    call_summary = row['call_summary']
+    nps = row['NPS']
+    pain_point = row['pain_point']
+    customer_feedback = row['customer_feedback']
+    
+    # Create a textbox for displaying the row data
+    textbox = slide.shapes.add_textbox(Inches(1), Inches(3), Inches(8), Inches(4))
+    text_frame = textbox.text_frame
+    
+    # Set the text for the textbox
+    text_frame.text = f"Conversation ID: {conversation_id}\nCustomer ID: {customer_id}\nCall Summary: {call_summary}\nNPS: {nps}\nPain Point: {pain_point}\nCustomer Feedback: {customer_feedback}"
+    
+    # Set text formatting as needed (e.g., font size, color, etc.)
+    for paragraph in text_frame.paragraphs:
+        for run in paragraph.runs:
+            run.font.size = Inches(0.2)  # Adjust font size as needed
 
 # Save the presentation
-prs.save("conversation_slides_with_plots.pptx")
+prs.save('dataframe_slides.pptx')

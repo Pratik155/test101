@@ -1,4 +1,4 @@
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 import textwrap
 
 # Create a white background image
@@ -26,7 +26,7 @@ font_size = 24
 font = ImageFont.load_default()
 
 # Wrap the text to fit within the width of the box
-wrapped_text = textwrap.fill(text, width=box_x2 - box_x1)
+wrapped_text = textwrap.fill(text, width=35)
 
 # Calculate text width and height
 text_width, text_height = draw.textsize(wrapped_text, font=font)
@@ -35,8 +35,16 @@ text_width, text_height = draw.textsize(wrapped_text, font=font)
 text_x = (box_x1 + box_x2 - text_width) // 2
 text_y = (box_y1 + box_y2 - text_height) // 2
 
-# Draw the wrapped text on the image
+# Draw the text on the image
 draw.text((text_x, text_y), wrapped_text, fill=(0, 0, 0), font=font)
+
+# Apply perspective transform to warp the text
+bbox = (text_x, text_y, text_x + text_width, text_y + text_height)
+warped_text = image.crop(bbox)
+warped_text = warped_text.transform(warped_text.size, Image.PERSPECTIVE, (1, 0.2, 0, 0.2, 1, 0, 0, 0))
+
+# Paste the warped text back onto the original image
+image.paste(warped_text, bbox)
 
 # Save the image
 image.save("output_image.png")

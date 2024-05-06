@@ -6,12 +6,16 @@ from pptx.util import Inches
 # Create a PowerPoint presentation object
 prs = Presentation()
 
+# Define box dimensions
+box_width = Inches(2)
+box_height = Inches(1)
+
 # Loop through each row in the DataFrame
 for index, row in df.iterrows():
     # Create a slide for each row
     slide = prs.slides.add_slide(prs.slide_layouts[5])  # Choose a layout (you can change the index as per your preference)
     
-    # Access each column data and format it as needed
+    # Access each column data
     conversation_id = row['Conversation_id']
     customer_id = row['customer_id']
     call_summary = row['call_summary']
@@ -19,17 +23,21 @@ for index, row in df.iterrows():
     pain_point = row['pain_point']
     customer_feedback = row['customer_feedback']
     
-    # Create a textbox for displaying the row data
-    textbox = slide.shapes.add_textbox(Inches(1), Inches(3), Inches(8), Inches(4))
-    text_frame = textbox.text_frame
+    # Define positions for each box
+    positions = [Inches(1), Inches(2.5), Inches(4), Inches(5.5), Inches(7), Inches(8.5)]
     
-    # Set the text for the textbox
-    text_frame.text = f"Conversation ID: {conversation_id}\nCustomer ID: {customer_id}\nCall Summary: {call_summary}\nNPS: {nps}\nPain Point: {pain_point}\nCustomer Feedback: {customer_feedback}"
-    
-    # Set text formatting as needed (e.g., font size, color, etc.)
-    for paragraph in text_frame.paragraphs:
-        for run in paragraph.runs:
-            run.font.size = Inches(0.2)  # Adjust font size as needed
-
+    # Loop through each piece of information and create a box for it
+    for i, text in enumerate([conversation_id, customer_id, call_summary, nps, pain_point, customer_feedback]):
+        # Create a textbox for the information
+        textbox = slide.shapes.add_textbox(positions[i], Inches(3), box_width, box_height)
+        text_frame = textbox.text_frame
+        text_frame.text = text
+        
+        # Format the box
+        text_frame.paragraphs[0].alignment = 1  # Center alignment
+        text_frame.word_wrap = True
+        text_frame.auto_size = True
+        text_frame.fit_text()
+        
 # Save the presentation
-prs.save('dataframe_slides.pptx')
+prs.save('dataframe_boxes.pptx')

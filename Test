@@ -20,7 +20,12 @@ df = pd.DataFrame(data)
 def create_image(row):
     fig, ax = plt.subplots(figsize=(8, 4))
     ax.add_patch(Rectangle((0, 0), 8, 4, edgecolor='black', facecolor='lightblue'))
-    plt.text(0.5, 0.5, f"Conversation_id: {row['Conversation_id']}\nCustomer_id: {row['customer_id']}\nCall Summary: {row['call_summary']}\nNPS: {row['NPS']}\nPain Point: {row['pain_point']}\nCustomer Feedback: {row['customer_feedback']}", fontsize=12, ha='left', va='center')
+    plt.text(0.5, 0.9, f"Conversation_id: {row['Conversation_id']}", fontsize=12, ha='left', va='center')
+    plt.text(0.5, 0.75, f"Customer_id: {row['customer_id']}", fontsize=12, ha='left', va='center')
+    plt.text(0.5, 0.6, f"Call Summary: {row['call_summary']}", fontsize=12, ha='left', va='center')
+    plt.text(0.5, 0.45, f"NPS: {row['NPS']}", fontsize=12, ha='left', va='center')
+    plt.text(0.5, 0.3, f"Pain Point: {row['pain_point']}", fontsize=12, ha='left', va='center')
+    plt.text(0.5, 0.15, f"Customer Feedback: {row['customer_feedback']}", fontsize=12, ha='left', va='center')
     ax.axis('off')
     plt.tight_layout()
     # Save the plot to a BytesIO object

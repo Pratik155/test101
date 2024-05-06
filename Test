@@ -1,50 +1,40 @@
 from PIL import Image, ImageDraw, ImageFont
 
-# Create a blank image with the specified dimensions
-image_width = 1920
-image_height = 1080
-image = Image.new("RGB", (image_width, image_height), "white")
+# Create a white background image
+width = 1920
+height = 1080
+background_color = (255, 255, 255)
+image = Image.new("RGB", (width, height), background_color)
+
+# Define the box coordinates and dimensions
+box_color = (169, 169, 169)
+box_x1 = 51
+box_y1 = 756
+box_x2 = 1204
+box_y2 = 1027
+
+# Draw the box on the image
 draw = ImageDraw.Draw(image)
+draw.rectangle([box_x1, box_y1, box_x2, box_y2], fill=box_color)
 
-# Define box dimensions and spacing
-box_width = image_width // 5
-box_height = (image_height // 2) - 20  # Subtract some padding for spacing
-box_padding = 10
-box_x = 0
-box_y = image_height // 2
+# Define the text to fill the box (lorem ipsum)
+text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
 
-# Dummy data for box content
-box_data = [
-    {"heading": "Box 1", "content": "Lorem ipsum dolor sit amet"},
-    {"heading": "Box 2", "content": "consectetur adipiscing elit"},
-    {"heading": "Box 3", "content": "sed do eiusmod tempor incididunt"},
-    {"heading": "Box 4", "content": "ut labore et dolore magna aliqua"},
-    {"heading": "Box 5", "content": "Ut enim ad minim veniam"},
-]
+# Load a font and set its size
+font = ImageFont.load_default()
 
-# Define font and size for text
-font = ImageFont.truetype("arial.ttf", 20)
+# Calculate text width and height
+text_width, text_height = draw.textsize(text, font=font)
 
-# Draw each box with its content
-for data in box_data:
-    # Calculate text size for content
-    content_width, content_height = draw.textsize(data["content"], font=font)
+# Calculate the position to center the text in the box
+text_x = (box_x1 + box_x2 - text_width) // 2
+text_y = (box_y1 + box_y2 - text_height) // 2
 
-    # Calculate box size based on content size
-    box_width = max(content_width + 20, box_width)  # Add padding for content
-    box_height = content_height + 60  # Add some padding for heading and spacing
-
-    # Draw box
-    draw.rectangle([box_x, box_y, box_x + box_width, box_y + box_height], outline="black")
-    
-    # Draw heading
-    draw.text((box_x + 10, box_y + 10), data["heading"], fill="black", font=font)
-
-    # Draw content
-    draw.text((box_x + 10, box_y + 40), data["content"], fill="black", font=font)
-
-    # Update box position for next iteration
-    box_x += box_width + box_padding
+# Draw the text on the image
+draw.text((text_x, text_y), text, fill=(0, 0, 0), font=font)
 
 # Save the image
-image.save("image_with_boxes.png")
+image.save("output_image.png")
+
+# Display the image
+image.show()

@@ -1,43 +1,46 @@
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 from pptx import Presentation
-from pptx.util import Inches
+from io import BytesIO
+import pandas as pd
 
-# Assuming df is your DataFrame with the specified columns
+# Sample dataframe
+data = {
+    'Conversation_id': [1, 2, 3, 4, 5],
+    'customer_id': [101, 102, 103, 104, 105],
+    'call_summary': ['Summary 1', 'Summary 2', 'Summary 3', 'Summary 4', 'Summary 5'],
+    'NPS': [9, 7, 8, 5, 6],
+    'pain_point': ['Pain Point 1', 'Pain Point 2', 'Pain Point 3', 'Pain Point 4', 'Pain Point 5'],
+    'customer_feedback': ['Feedback 1', 'Feedback 2', 'Feedback 3', 'Feedback 4', 'Feedback 5']
+}
 
-# Create a PowerPoint presentation object
+df = pd.DataFrame(data)
+
+# Function to create image with boxes and text
+def create_image(row):
+    fig, ax = plt.subplots(figsize=(8, 4))
+    ax.add_patch(Rectangle((0, 0), 8, 4, edgecolor='black', facecolor='lightblue'))
+    plt.text(0.5, 0.5, f"Conversation_id: {row['Conversation_id']}\nCustomer_id: {row['customer_id']}\nCall Summary: {row['call_summary']}\nNPS: {row['NPS']}\nPain Point: {row['pain_point']}\nCustomer Feedback: {row['customer_feedback']}", fontsize=12, ha='left', va='center')
+    ax.axis('off')
+    plt.tight_layout()
+    # Save the plot to a BytesIO object
+    buffer = BytesIO()
+    plt.savefig(buffer, format='png')
+    buffer.seek(0)
+    plt.close(fig)
+    return buffer
+
+# Create PowerPoint presentation
 prs = Presentation()
 
-# Define box dimensions
-box_width = Inches(2)
-box_height = Inches(1)
-
-# Loop through each row in the DataFrame
+# Iterate over each row and add slide with image
 for index, row in df.iterrows():
-    # Create a slide for each row
-    slide = prs.slides.add_slide(prs.slide_layouts[5])  # Choose a layout (you can change the index as per your preference)
-    
-    # Access each column data
-    conversation_id = row['Conversation_id']
-    customer_id = row['customer_id']
-    call_summary = row['call_summary']
-    nps = row['NPS']
-    pain_point = row['pain_point']
-    customer_feedback = row['customer_feedback']
-    
-    # Define positions for each box
-    positions = [Inches(1), Inches(2.5), Inches(4), Inches(5.5), Inches(7), Inches(8.5)]
-    
-    # Loop through each piece of information and create a box for it
-    for i, text in enumerate([conversation_id, customer_id, call_summary, nps, pain_point, customer_feedback]):
-        # Create a textbox for the information
-        textbox = slide.shapes.add_textbox(positions[i], Inches(3), box_width, box_height)
-        text_frame = textbox.text_frame
-        text_frame.text = text
-        
-        # Format the box
-        text_frame.paragraphs[0].alignment = 1  # Center alignment
-        text_frame.word_wrap = True
-        text_frame.auto_size = True
-        text_frame.fit_text()
-        
-# Save the presentation
-prs.save('dataframe_boxes.pptx')
+    # Create slide
+    slide = prs.slides.add_slide(prs.slide_layouts[5])
+    # Add image to slide
+    image_stream = create_image(row)
+    left = top = prs.slide_width // 8
+    slide.shapes.add_picture(image_stream, left, top, width=prs.slide_width*3/4)
+
+# Save presentation
+prs.save('output.pptx')

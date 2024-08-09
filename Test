@@ -9,6 +9,7 @@ from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score
+import numpy as np
 
 # Define a basic list of stopwords
 stopwords = set([
@@ -77,7 +78,14 @@ X_test_tfidf = vectorizer.transform(X_test)
 # Label Encoding
 label_encoder = LabelEncoder()
 y_train_encoded = label_encoder.fit_transform(y_train)
-y_test_encoded = label_encoder.transform(y_test)
+
+# Use a mapping for unseen labels
+known_classes = set(label_encoder.classes_)
+
+def handle_unseen_labels(preds, known_classes):
+    """ Replace unseen labels with a default label """
+    default_label = len(known_classes)  # Assuming the default label is out of known classes range
+    return [default_label if label not in known_classes else label for label in preds]
 
 # Initialize classifiers
 classifiers = {
@@ -96,17 +104,23 @@ for name, clf in classifiers.items():
     # Predict on the test set
     y_pred_encoded = clf.predict(X_test_tfidf)
     
+    # Handle unseen labels during prediction
+    y_pred_encoded_safe = handle_unseen_labels(y_pred_encoded, known_classes)
+    
     # Convert encoded predictions back to original category names
-    y_pred = label_encoder.inverse_transform(y_pred_encoded)
+    y_pred = label_encoder.inverse_transform(y_pred_encoded_safe)
+    
+    # Convert y_test to original labels and handle any unseen test labels
+    y_test_encoded_safe = handle_unseen_labels(y_test.map(lambda x: label_encoder.transform([x])[0]).values, known_classes)
     
     # Calculate accuracy
-    accuracy = accuracy_score(y_test_encoded, y_pred_encoded)
+    accuracy = accuracy_score(y_test_encoded_safe, y_pred_encoded_safe)
     print(f'{name} Accuracy: {accuracy:.2f}')
     
     # Display a sample of predictions vs actual values
     sample_size = 10
     sample_df = pd.DataFrame({
-        'Actual': label_encoder.inverse_transform(y_test_encoded[:sample_size]),
+        'Actual': y_test.head(sample_size),
         'Predicted': y_pred[:sample_size]
     })
     print(f'\nSample predictions for {name}:\n', sample_df)

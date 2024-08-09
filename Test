@@ -79,6 +79,17 @@ X_test_tfidf = vectorizer.transform(X_test)
 label_encoder = LabelEncoder()
 y_train_encoded = label_encoder.fit_transform(y_train)
 
+# Define fallback label for unseen labels
+fallback_label = 'unknown'
+
+# Ensure all test labels are known to label encoder or map them to fallback
+def safe_encode_labels(labels, encoder):
+    return [label if label in encoder.classes_ else fallback_label for label in labels]
+
+def safe_inverse_transform(encoder, encoded_labels):
+    known_labels = set(encoder.classes_)
+    return [encoder.inverse_transform([label])[0] if label in known_labels else fallback_label for label in encoded_labels]
+
 # Initialize classifiers
 classifiers = {
     'Naive Bayes': MultinomialNB(),
@@ -88,11 +99,6 @@ classifiers = {
     'K-Nearest Neighbors': KNeighborsClassifier()
 }
 
-def safe_inverse_transform(label_encoder, labels_encoded):
-    """ Safely inverse transform with handling unseen labels """
-    known_labels = set(label_encoder.classes_)
-    return [label_encoder.inverse_transform([label])[0] if label in known_labels else 'unknown' for label in labels_encoded]
-
 # Train and evaluate each classifier
 for name, clf in classifiers.items():
     # Train the classifier
@@ -101,14 +107,14 @@ for name, clf in classifiers.items():
     # Predict on the test set
     y_pred_encoded = clf.predict(X_test_tfidf)
     
-    # Handle unseen labels during prediction
+    # Safe inverse transform of predictions
     y_pred_safe = safe_inverse_transform(label_encoder, y_pred_encoded)
     
-    # Convert y_test to encoded labels
+    # Encode test labels with fallback
     y_test_encoded = np.array([label_encoder.transform([y])[0] if y in label_encoder.classes_ else -1 for y in y_test])
+    y_test_encoded_safe = np.where(y_test_encoded == -1, len(label_encoder.classes_), y_test_encoded)
     
     # Calculate accuracy
-    y_test_encoded_safe = np.where(y_test_encoded == -1, len(label_encoder.classes_), y_test_encoded)  # Handle -1 for unseen labels
     accuracy = accuracy_score(y_test_encoded_safe, y_pred_encoded)
     print(f'{name} Accuracy: {accuracy:.2f}')
     

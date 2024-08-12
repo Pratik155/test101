@@ -1,58 +1,52 @@
-import streamlit as st
+import pandas as pd
+import pickle
 
-# Define HTML and CSS
-video_html = """
-<video autoplay controls width="640" height="480">
-  <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-"""
+# Step 1: Load the vectorizer and trained models
+with open("artifacts/vectorizer.pkl", "rb") as f:
+    vectorizer = pickle.load(f)
 
-css = """
-<style>
-.video-popup {
-  display: none;
-  position: fixed;
-  z-index: 999;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.7);
+with open("artifacts/K3_classifier.pkl", "rb") as f:
+    model_K3 = pickle.load(f)
+
+# Step 2: Create a test DataFrame with K3 and K4 for predictions
+test_data = {
+    "summary": [
+        "Customer wants to open a new savings account",
+        "Request for credit card closure",
+        "Inquire about savings account balance",
+        "Issue with credit card transaction",
+        "Closing a savings account"
+    ],
+    "K3": ["", "", "", "", ""],  # To be predicted
+    "K4": ["", "", "", "", ""]   # To be predicted
 }
 
-.video-content {
-  position: relative;
-  top: 50%;
-  transform: translateY(-50%);
-  text-align: center;
-}
-</style>
-"""
+test_df = pd.DataFrame(test_data)
 
-# Streamlit App
-def main():
-    st.title("Video Popup")
+# Step 3: Vectorize the summaries
+X_test = vectorizer.transform(test_df['summary']).toarray()
 
-    # Button to open video popup
-    if st.button("Open Video"):
-        st.markdown(css, unsafe_allow_html=True)
-        st.markdown('<div id="videoPopup" class="video-popup">', unsafe_allow_html=True)
-        st.markdown('<div class="video-content">', unsafe_allow_html=True)
-        st.markdown('<span class="close" onclick="closeVideo()">&times;</span>', unsafe_allow_html=True)
-        st.markdown(video_html, unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+# Step 4: Predict K3 using the K3 model
+predicted_K3 = model_K3.predict(X_test)
+test_df['K3'] = predicted_K3
 
-    # JavaScript to close video popup
-    st.markdown("""
-    <script>
-    function closeVideo() {
-        var videoPopup = document.getElementById("videoPopup");
-        videoPopup.style.display = "none";
-    }
-    </script>
-    """, unsafe_allow_html=True)
+# Step 5: Predict K4 based on the predicted K3
+for i, row in test_df.iterrows():
+    K3_pred = row['K3']
+    model_path = f"artifacts/{K3_pred.replace(' ', '_')}_K4_predictor.pkl"
+    
+    try:
+        # Load the corresponding K4 model
+        with open(model_path, "rb") as f:
+            model_K4 = pickle.load(f)
+        
+        # Predict K4
+        X_single = X_test[i].reshape(1, -1)
+        predicted_K4 = model_K4.predict(X_single)
+        test_df.at[i, 'K4'] = predicted_K4[0]
+    
+    except FileNotFoundError:
+        test_df.at[i, 'K4'] = "No model found for this K3"
 
-if __name__ == "__main__":
-    main()
+# Step 6: Display the final predictions
+print(test_df)

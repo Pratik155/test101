@@ -3,6 +3,7 @@ from catboost import CatBoostClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.feature_extraction.text import TfidfVectorizer
+from imblearn.over_sampling import RandomOverSampler
 import os
 import pickle
 
@@ -20,12 +21,21 @@ X = vectorizer.fit_transform(df['summary']).toarray()
 with open("artifacts/vectorizer.pkl", "wb") as f:
     pickle.dump(vectorizer, f)
 
-# Labels
-y_K3 = df['K3']
+# Initial oversampling to ensure each K4 has at least 10 records
+ros_initial = RandomOverSampler(sampling_strategy={k: max(10, v) for k, v in df['K4'].value_counts().items()}, random_state=42)
+X_resampled, y_resampled = ros_initial.fit_resample(X, df['K4'])
+
+# Create a new DataFrame with resampled data
+df_resampled = pd.DataFrame(X_resampled, columns=[f'feature_{i}' for i in range(X_resampled.shape[1])])
+df_resampled['K3'] = df['K3'].iloc[ros_initial.sample_indices_].reset_index(drop=True)
+df_resampled['K4'] = y_resampled
 
 # Step 3: Train K3 Classifier
+# Labels
+y_K3 = df_resampled['K3']
+
 # Train-test split
-X_train_K3, X_test_K3, y_train_K3, y_test_K3 = train_test_split(X, y_K3, test_size=0.2, random_state=42)
+X_train_K3, X_test_K3, y_train_K3, y_test_K3 = train_test_split(df_resampled.drop(columns=['K3', 'K4']), y_K3, test_size=0.2, random_state=42)
 
 # Initialize and train the K3 model
 model_K3 = CatBoostClassifier(iterations=100, depth=5, learning_rate=0.1, verbose=0)
@@ -45,12 +55,12 @@ f1_K3 = f1_score(y_test_K3, y_pred_K3, average='weighted')
 print(f"K3 Classifier - Accuracy: {accuracy_K3}, Precision: {precision_K3}, Recall: {recall_K3}, F1 Score: {f1_K3}")
 
 # Step 4: Train K4 Classifiers for Each K3
-K3_values = df['K3'].unique()
+K3_values = df_resampled['K3'].unique()
 
 for K3 in K3_values:
-    sub_df = df[df['K3'] == K3]
+    sub_df = df_resampled[df_resampled['K3'] == K3]
     if sub_df['K4'].nunique() > 1:  # Check if there are enough records for multiple classes
-        X_sub = vectorizer.transform(sub_df['summary']).toarray()  # Vectorize the summaries for this subset
+        X_sub = sub_df.drop(columns=['K3', 'K4'])
         y_K4 = sub_df['K4']
         
         # Train-test split

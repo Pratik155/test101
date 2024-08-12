@@ -1,105 +1,68 @@
 import pandas as pd
-import re
+from catboost import CatBoostClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+import os
+import pickle
 
-# Define a basic list of stopwords
-stopwords = set([
-    'i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your', 
-    'yours', 'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', 
-    'her', 'hers', 'herself', 'it', 'its', 'itself', 'they', 'them', 'their', 
-    'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'this', 'that', 
-    'these', 'those', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 
-    'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing', 'a', 'an', 
-    'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while', 'of', 
-    'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 
-    'during', 'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down', 
-    'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 
-    'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 
-    'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 
-    'own', 'same', 'so', 'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 
-    'don', 'should', 'now'
-])
+# Step 1: Create directory to store models
+os.makedirs("artifacts", exist_ok=True)
 
-def preprocess_text(text):
-    # Lowercase text
-    text = text.lower()
-    # Remove punctuation and special characters
-    text = re.sub(r'[^\w\s]', '', text)
-    # Remove stop words
-    text = ' '.join(word for word in text.split() if word not in stopwords)
-    return text
+# Step 2: Load and preprocess data
+df = pd.read_csv('your_data.csv')  # Replace with your actual CSV file
 
-# Load your data
-df = pd.read_csv('your_data.csv')  # Replace with your actual data source
+# Step 3: Train K3 Classifier
+X = df['summary']
+y_K3 = df['K3']
 
-# Display the first few rows
-print(df.head())
+# Train-test split
+X_train_K3, X_test_K3, y_train_K3, y_test_K3 = train_test_split(X, y_K3, test_size=0.2, random_state=42)
 
-# Check the distribution of journey names
-print(df['journey'].value_counts())
+# Initialize and train the K3 model
+model_K3 = CatBoostClassifier(iterations=100, depth=5, learning_rate=0.1, verbose=0)
+model_K3.fit(X_train_K3, y_train_K3)
 
-# Sample the data to make sure each journey is equally represented
-min_count = df['journey'].value_counts().min()
-sampled_df = df.groupby('journey').apply(lambda x: x.sample(min_count)).reset_index(drop=True)
+# Save the K3 model
+with open("artifacts/K3_classifier.pkl", "wb") as f:
+    pickle.dump(model_K3, f)
 
-# Verify the new distribution
-print(sampled_df['journey'].value_counts())
+# Evaluate the K3 model
+y_pred_K3 = model_K3.predict(X_test_K3)
+accuracy_K3 = accuracy_score(y_test_K3, y_pred_K3)
+precision_K3 = precision_score(y_test_K3, y_pred_K3, average='weighted', zero_division=0)
+recall_K3 = recall_score(y_test_K3, y_pred_K3, average='weighted')
+f1_K3 = f1_score(y_test_K3, y_pred_K3, average='weighted')
 
-# Apply preprocessing to the summary column
-sampled_df['summary'] = sampled_df['summary'].apply(preprocess_text)
+print(f"K3 Classifier - Accuracy: {accuracy_K3}, Precision: {precision_K3}, Recall: {recall_K3}, F1 Score: {f1_K3}")
 
-# Shuffle and split the data
-X = sampled_df[['summary']]
-y = sampled_df['journey']
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+# Step 4: Train K4 Classifiers for Each K3
+K3_values = df['K3'].unique()
 
-# TF-IDF Vectorization
-vectorizer = TfidfVectorizer()
-X_train_tfidf = vectorizer.fit_transform(X_train['summary'])
-X_test_tfidf = vectorizer.transform(X_test['summary'])
+for K3 in K3_values:
+    sub_df = df[df['K3'] == K3]
+    if sub_df['K4'].nunique() > 1:  # Check if there are enough records for multiple classes
+        X_sub = sub_df['summary']
+        y_K4 = sub_df['K4']
+        
+        # Train-test split
+        X_train_K4, X_test_K4, y_train_K4, y_test_K4 = train_test_split(X_sub, y_K4, test_size=0.2, random_state=42)
+        
+        # Initialize and train the K4 model
+        model_K4 = CatBoostClassifier(iterations=100, depth=5, learning_rate=0.1, verbose=0)
+        model_K4.fit(X_train_K4, y_train_K4)
+        
+        # Save the K4 model
+        model_name = f"artifacts/{K3.replace(' ', '_')}_K4_predictor.pkl"
+        with open(model_name, "wb") as f:
+            pickle.dump(model_K4, f)
+        
+        # Evaluate the K4 model
+        y_pred_K4 = model_K4.predict(X_test_K4)
+        accuracy_K4 = accuracy_score(y_test_K4, y_pred_K4)
+        precision_K4 = precision_score(y_test_K4, y_pred_K4, average='weighted', zero_division=0)
+        recall_K4 = recall_score(y_test_K4, y_pred_K4, average='weighted')
+        f1_K4 = f1_score(y_test_K4, y_pred_K4, average='weighted')
 
-# Handle categorical data
-encoder = OneHotEncoder(handle_unknown='ignore')
-y_train_encoded = encoder.fit_transform(y_train.values.reshape(-1, 1)).toarray()
-y_test_encoded = encoder.transform(y_test.values.reshape(-1, 1)).toarray()
-
-# Initialize classifiers
-classifiers = {
-    'Naive Bayes': MultinomialNB(),
-    'Logistic Regression': LogisticRegression(max_iter=1000),
-    'SVM': SVC(),
-    'Random Forest': RandomForestClassifier(),
-    'K-Nearest Neighbors': KNeighborsClassifier()
-}
-
-# Train and evaluate each classifier
-for name, clf in classifiers.items():
-    # Train the classifier
-    clf.fit(X_train_tfidf, y_train_encoded)
-    
-    # Predict on the test set
-    y_pred_encoded = clf.predict(X_test_tfidf)
-    
-    # Convert predictions back to original labels
-    y_pred = encoder.inverse_transform(y_pred_encoded)
-    y_test_labels = encoder.inverse_transform(y_test_encoded)
-    
-    # Calculate accuracy
-    accuracy = accuracy_score(y_test_labels, y_pred)
-    print(f'{name} Accuracy: {accuracy:.2f}')
-    
-    # Display a sample of predictions vs actual values
-    sample_size = 10
-    sample_df = pd.DataFrame({
-        'Actual': y_test_labels[:sample_size],
-        'Predicted': y_pred[:sample_size]
-    })
-    print(f'\nSample predictions for {name}:\n', sample_df)
+        print(f"{K3} - K4 Classifier - Accuracy: {accuracy_K4}, Precision: {precision_K4}, Recall: {recall_K4}, F1 Score: {f1_K4}")
+    else:
+        print(f"Skipping {K3} as it does not have enough unique K4 classes.")
